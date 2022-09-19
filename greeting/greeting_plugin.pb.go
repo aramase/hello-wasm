@@ -45,3 +45,31 @@ func _greeter_greet(ptr, size uint32) uint64 {
 	ptr, size = wasm.ByteToPtr(b)
 	return (uint64(ptr) << uint64(32)) | uint64(size)
 }
+
+type hostFunctions struct{}
+
+func NewHostFunctions() HostFunctions {
+	return hostFunctions{}
+}
+
+//go:wasm-module env
+//export should_greet
+func _should_greet(ptr uint32, size uint32) uint64
+
+func (h hostFunctions) ShouldGreet(ctx context.Context, request ShouldGreetRequest) (response ShouldGreetReply, err error) {
+	buf, err := request.MarshalVT()
+	if err != nil {
+		return response, err
+	}
+	ptr, size := wasm.ByteToPtr(buf)
+	ptrSize := _should_greet(ptr, size)
+
+	ptr = uint32(ptrSize >> 32)
+	size = uint32(ptrSize)
+	buf = wasm.PtrToByte(ptr, size)
+
+	if err = response.UnmarshalVT(buf); err != nil {
+		return response, err
+	}
+	return response, nil
+}

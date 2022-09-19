@@ -19,3 +19,15 @@ message GreetRequest {
 message GreetReply {
     string message = 1;
 }
+
+// go:plugin type=host
+service HostFunctions {
+  rpc ShouldGreet(ShouldGreetRequest) returns (ShouldGreetReply) {}
+}
+
+message ShouldGreetRequest {
+}
+
+message ShouldGreetReply {
+  bool should_greet = 1;
+}

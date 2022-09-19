@@ -12,6 +12,7 @@ import (
 	context "context"
 	errors "errors"
 	fmt "fmt"
+	wasm "github.com/knqyf263/go-plugin/wasm"
 	wazero "github.com/tetratelabs/wazero"
 	api "github.com/tetratelabs/wazero/api"
 	sys "github.com/tetratelabs/wazero/sys"
@@ -20,6 +21,43 @@ import (
 	fs "io/fs"
 	os "os"
 )
+
+type _hostFunctions struct {
+	HostFunctions
+}
+
+func (h _hostFunctions) Export() map[string]interface{} {
+	return map[string]interface{}{
+		"should_greet": h._ShouldGreet(),
+	}
+}
+
+func (h _hostFunctions) _ShouldGreet() func(ctx context.Context, m api.Module, offset, size uint32) uint64 {
+	return func(ctx context.Context, m api.Module, offset, size uint32) uint64 {
+		buf, err := wasm.ReadMemory(ctx, m, offset, size)
+		if err != nil {
+			panic(err)
+		}
+		var request ShouldGreetRequest
+		err = request.UnmarshalVT(buf)
+		if err != nil {
+			panic(err)
+		}
+		resp, err := h.ShouldGreet(ctx, request)
+		if err != nil {
+			panic(err)
+		}
+		buf, err = resp.MarshalVT()
+		if err != nil {
+			panic(err)
+		}
+		ptr, err := wasm.WriteMemory(ctx, m, buf)
+		if err != nil {
+			panic(err)
+		}
+		return (ptr << uint64(32)) | uint64(len(buf))
+	}
+}
 
 const GreeterPluginAPIVersion = 1
 
@@ -51,7 +89,7 @@ func NewGreeterPlugin(ctx context.Context, opt GreeterPluginOption) (*GreeterPlu
 		config:  config,
 	}, nil
 }
-func (p *GreeterPlugin) Load(ctx context.Context, pluginPath string) (Greeter, error) {
+func (p *GreeterPlugin) Load(ctx context.Context, pluginPath string, hostFunctions HostFunctions) (Greeter, error) {
 	b, err := os.ReadFile(pluginPath)
 	if err != nil {
 		return nil, err
@@ -60,8 +98,10 @@ func (p *GreeterPlugin) Load(ctx context.Context, pluginPath string) (Greeter, e
 	// Create an empty namespace so that multiple modules will not conflict
 	ns := p.runtime.NewNamespace(ctx)
 
+	h := _hostFunctions{hostFunctions}
+
 	// Instantiate a Go-defined module named "env" that exports functions.
-	_, err = p.runtime.NewModuleBuilder("env").Instantiate(ctx, ns)
+	_, err = p.runtime.NewModuleBuilder("env").ExportFunctions(h.Export()).Instantiate(ctx, ns)
 	if err != nil {
 		return nil, err
 	}

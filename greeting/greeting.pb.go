@@ -59,9 +59,43 @@ func (x *GreetReply) GetMessage() string {
 	return ""
 }
 
+type ShouldGreetRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+}
+
+func (x *ShouldGreetRequest) ProtoReflect() protoreflect.Message {
+	panic(`not implemented`)
+}
+
+type ShouldGreetReply struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	ShouldGreet bool `protobuf:"varint,1,opt,name=should_greet,json=shouldGreet,proto3" json:"should_greet,omitempty"`
+}
+
+func (x *ShouldGreetReply) ProtoReflect() protoreflect.Message {
+	panic(`not implemented`)
+}
+
+func (x *ShouldGreetReply) GetShouldGreet() bool {
+	if x != nil {
+		return x.ShouldGreet
+	}
+	return false
+}
+
 // The greeting service definition.
 // go:plugin type=plugin version=1
 type Greeter interface {
 	// Sends a greeting
 	Greet(context.Context, GreetRequest) (GreetReply, error)
+}
+
+// go:plugin type=host
+type HostFunctions interface {
+	ShouldGreet(context.Context, ShouldGreetRequest) (ShouldGreetReply, error)
 }

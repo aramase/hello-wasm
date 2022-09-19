@@ -14,7 +14,7 @@ func main() {
 		panic(err)
 	}
 
-	pl, err := p.Load(ctx, "plugin/plugin.wasm")
+	pl, err := p.Load(ctx, "plugin/plugin.wasm", myHostFunctions{})
 	if err != nil {
 		panic(err)
 	}
@@ -26,4 +26,13 @@ func main() {
 		panic(err)
 	}
 	fmt.Println(reply.GetMessage())
+}
+
+// myHostFunctions implements HostFunctions
+type myHostFunctions struct{}
+
+func (myHostFunctions) ShouldGreet(ctx context.Context, req greeting.ShouldGreetRequest) (greeting.ShouldGreetReply, error) {
+	return greeting.ShouldGreetReply{
+		ShouldGreet: false,
+	}, nil
 }
